@@ -254,7 +254,7 @@ var T = {
   ctaH:"¿Quieres esto con tus precios?",
   ctaP:"Lo instalamos con tu lista de precios, tus zonas y tu forma de hablar. Mes a mes, con garantía de 30 días.",
   ctaBtn:"Quiero mi demo", restart:"Reiniciar demo",
-  fine:"Negocio y precios ficticios, solo de ejemplo. En la demo no se envía ni se cobra nada.",
+  fine:"Negocio y precios ficticios. Los tiempos de respuesta son los reales de WhatsApp + Make (5 a 9 s). En la demo no se envía ni se cobra nada.",
   today:"HOY", hint:"👇 Toca el mensaje de abajo para enviarlo", nextDay:"MAÑANA · 10:00 A.M.",
   fast:function(s){return "Respondido en "+s+" s";},
   saturday:function(d){return "el sábado "+d;},
@@ -302,7 +302,7 @@ var T = {
   ctaH:"Want this with your prices?",
   ctaP:"We set it up with your price list, your delivery zones and your tone. Month to month, with a 30-day guarantee.",
   ctaBtn:"Get my demo", restart:"Restart demo",
-  fine:"Fictional business and sample prices. Nothing is sent or charged in this demo.",
+  fine:"Fictional business and sample prices. Reply times match real WhatsApp + Make (5 to 9 s). Nothing is sent or charged in this demo.",
   today:"TODAY", hint:"👇 Tap the message below to send it", nextDay:"TOMORROW · 10:00 AM",
   fast:function(s){return "Answered in "+s+" s";},
   saturday:function(d){return "Saturday "+d;},
@@ -364,7 +364,7 @@ function clockStr(d){
 }
 function now(){ return new Date(st.base.getTime() + st.offset); }
 
-function later(fn, ms){ var my = run; timers.push(setTimeout(function(){ if (my === run) fn(); }, reduce ? Math.min(ms, 150) : ms)); }
+function later(fn, ms){ var my = run; timers.push(setTimeout(function(){ if (my === run) fn(); }, ms)); }
 function scroll(){ msgs.scrollTop = msgs.scrollHeight; }
 
 /* ---------- Pintar ---------- */
@@ -395,22 +395,32 @@ function setReplies(list){
 
 /* El cliente escribe; el negocio contesta con "escribiendo…" */
 function say(text){ st.offset += 4000; bubble("out", esc(text)); }
+/* Tiempos reales de WhatsApp Cloud API + Make (webhook instantáneo):
+   ~1.5 s hasta que Make recibe el mensaje y marca "escribiendo",
+   respuesta total entre REPLY_MIN y REPLY_MAX s, mensajes seguidos ~1 s aparte. */
+var REPLY_MIN = 5, REPLY_MAX = 9, RECEIVE_MS = 1500, GAP_MS = 1000;
 function botTurn(parts, done, opts){
   opts = opts || {};
   var started = Date.now();
+  var total = (REPLY_MIN + Math.random() * (REPLY_MAX - REPLY_MIN)) * 1000;
   var pres = $("presence");
   later(function(){
     pres.textContent = t("typing");
     var ty = document.createElement("div"); ty.className = "typing"; ty.innerHTML = "<i></i><i></i><i></i>"; msgs.appendChild(ty); scroll();
     later(function(){
-      ty.remove(); pres.textContent = t("online");
       var secs = Math.max(1, Math.round((Date.now() - started) / 1000));
       st.offset += secs * 1000;
-      parts.forEach(function(p, i){ bubble("in", p).classList.toggle("first", i === 0); });
+      ty.remove();
+      bubble("in", parts[0]);
       if (opts.fast) fast(secs);
-      if (done) done(secs);
-    }, opts.typeMs || 1300);
-  }, opts.waitMs || 500);
+      var i = 1;
+      (function next(){
+        if (i >= parts.length){ pres.textContent = t("online"); if (done) done(secs); return; }
+        msgs.appendChild(ty); scroll();
+        later(function(){ ty.remove(); bubble("in", parts[i]).classList.remove("first"); i++; next(); }, GAP_MS);
+      })();
+    }, total - RECEIVE_MS);
+  }, RECEIVE_MS);
 }
 
 /* ---------- Flujo ---------- */
@@ -436,7 +446,7 @@ function step1(){
     setReplies(Object.keys(ITEMS).map(function(k){
       return {label:ITEMS[k][lang] + " · " + money(ITEMS[k].price), go:function(){ pickItem(k); }};
     }));
-  }, {fast:true, typeMs:1600});
+  }, {fast:true});
 }
 
 function pickItem(k){
@@ -474,7 +484,7 @@ function pickZip(z){
   botTurn([esc(t("b_quote")) + rows, esc(t("b_quote2")())], function(){
     addLog("bolt", t("l_quote")(money(st.total).slice(1)), t("l_quoteS"));
     setReplies([{label:t("c_yes"), go:book}, {label:t("c_think"), go:think}]);
-  }, {typeMs:1700});
+  });
 }
 
 function book(){
@@ -490,7 +500,7 @@ function book(){
           zip:st.zip, area:ZIPS[st.zip][lang], total:money(st.total).slice(1)
         }));
         finish();
-      }, {typeMs:1500});
+      });
     }}]);
   });
 }
