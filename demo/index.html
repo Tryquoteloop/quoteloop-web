@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Demo QuoteLoop | Brincolines y fiestas</title>
-<meta name="description" content="Prueba cómo QuoteLoop contesta un WhatsApp con precios en segundos, da seguimiento y avisa al dueño. Demo para renta de brincolines y fiestas en Miami.">
-<meta property="og:title" content="Demo QuoteLoop | Brincolines y fiestas">
-<meta property="og:description" content="Tú eres el cliente: pide precio de un brincolín y mira la cotización llegar en segundos.">
+<title>Demo QuoteLoop | Pequeñas empresas</title>
+<meta name="description" content="Prueba cómo QuoteLoop contesta un WhatsApp con precios en segundos, da seguimiento y avisa al dueño. Demos para fiestas, dealers de autos y contratistas en Miami.">
+<meta property="og:title" content="Demo QuoteLoop | Pequeñas empresas">
+<meta property="og:description" content="Tú eres el cliente: elige un negocio, pide un precio y mira la cotización llegar en segundos.">
 <meta name="theme-color" content="#0B141A">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23111B21'/%3E%3Ccircle cx='50' cy='52' r='29' fill='none' stroke='%232A3942' stroke-width='10'/%3E%3Cpath d='M50 23 A29 29 0 1 1 28.45 71.4' fill='none' stroke='%2325D366' stroke-width='10' stroke-linecap='round'/%3E%3Cline x1='50' y1='52' x2='37.37' y2='63.38' stroke='%23fff' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='52' r='5.5' fill='%23fff'/%3E%3Crect x='43' y='8' width='14' height='9' rx='3' fill='%23fff'/%3E%3Cpath d='M73 73 L88 92 L66 82 Z' fill='%2325D366'/%3E%3C/svg%3E">
 <style>
@@ -142,6 +142,13 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;letter-spacing:-.025em;margin
 .cta.on ~ .restart{display:none}
 @media (max-width:820px){.screen{height:max(420px,calc(100svh - 330px));min-height:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+.picker{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+.picker span{font-size:13px;font-weight:700;color:var(--muted);margin-right:2px}
+.picker button{border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-weight:700;font-size:13.5px;padding:7px 12px;border-radius:999px;cursor:pointer;transition:background .12s,transform .12s}
+.picker button:hover{background:color-mix(in srgb,var(--green) 12%,var(--card))}
+.picker button:active{transform:scale(.97)}
+.picker button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.picker button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -178,14 +185,15 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;letter-spacing:-.025em;margin
   <span class="kicker"><svg width="14" height="14" aria-hidden="true"><use href="#i-bolt"/></svg><span data-t="kicker"></span></span>
   <h1 data-t="h1"></h1>
   <p data-t="lead"></p>
+  <div class="picker" role="group" aria-label="Negocio / Business"><span data-t="pick"></span><button type="button" data-ind="party" aria-pressed="true"></button><button type="button" data-ind="auto" aria-pressed="false"></button><button type="button" data-ind="ac" aria-pressed="false"></button></div>
 </section>
   <div class="phone">
     <div class="screen">
       <div class="island" aria-hidden="true"></div>
       <div class="status" aria-hidden="true"><span id="clock">9:41</span><span class="icons"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><svg><use href="#i-batt"/></svg></span></div>
       <div class="chathead">
-        <div class="avatar" aria-hidden="true">FB</div>
-        <div class="who"><b>Fiesta Brinca Rentals</b><span id="presence" data-t="online"></span></div>
+        <div class="avatar" id="bizAv" aria-hidden="true">FB</div>
+        <div class="who"><b id="bizName">Fiesta Brinca Rentals</b><span id="presence" data-t="online"></span></div>
         <span class="badge-demo" data-t="fictional"></span>
       </div>
       <div class="msgs" id="msgs" role="log" aria-live="polite" aria-label="Chat"></div>
@@ -222,132 +230,296 @@ h1{font-size:clamp(28px,5vw,44px);line-height:1.05;letter-spacing:-.025em;margin
 (function(){
 "use strict";
 
-/* ---------- Precios de ejemplo (negocio ficticio) ---------- */
-var ITEMS = {
-  castle:  {price:150, es:"Castillo brincolín 13×13", en:"13×13 bounce castle"},
-  combo:   {price:225, es:"Combo brincolín + tobogán", en:"Bounce house + slide combo"},
-  water:   {price:295, es:"Tobogán de agua 18 ft", en:"18 ft water slide"},
-  obstacle:{price:375, es:"Pista de obstáculos 40 ft", en:"40 ft obstacle course"}
-};
-var EXTRAS = {
-  tables: {price:88, es:"4 mesas + 32 sillas", en:"4 tables + 32 chairs"},
-  cotton: {price:65, es:"Máquina de algodón de azúcar (50 conos)", en:"Cotton candy machine (50 cones)"}
-};
-var ZIPS = {
-  "33012": {fee:0,  es:"Hialeah", en:"Hialeah"},
-  "33157": {fee:25, es:"Palmetto Bay", en:"Palmetto Bay"},
-  "33139": {fee:45, es:"Miami Beach", en:"Miami Beach"}
-};
-var TAX = 0.07, DEPOSIT = 50;
+/* ---------- Negocios de ejemplo (ficticios) ---------- */
+var IND = {
+ party:{
+  name:"Fiesta Brinca Rentals", av:"FB", tax:0.07, deposit:50, optRow:true, fee:null, whenOpt:false,
+  items:{
+   castle:  {price:150, es:"Castillo brincolín 13×13", en:"13×13 bounce castle"},
+   combo:   {price:225, es:"Combo brincolín + tobogán", en:"Bounce house + slide combo"},
+   water:   {price:295, es:"Tobogán de agua 18 ft", en:"18 ft water slide"},
+   obstacle:{price:375, es:"Pista de obstáculos 40 ft", en:"40 ft obstacle course"}
+  },
+  extras:{
+   tables: {price:88, es:"4 mesas + 32 sillas", en:"4 tables + 32 chairs"},
+   cotton: {price:65, es:"Máquina de algodón de azúcar (50 conos)", en:"Cotton candy machine (50 cones)"}
+  },
+  opts:{
+   "33012": {fee:0,  say:"33012", es:"Hialeah", en:"Hialeah"},
+   "33157": {fee:25, say:"33157", es:"Palmetto Bay", en:"Palmetto Bay"},
+   "33139": {fee:45, say:"33139", es:"Miami Beach", en:"Miami Beach"}
+  },
+  when:function(){ return satLabel(); },
+  es:{
+   tab:"🎈 Fiestas", tname:"Brincolines y fiestas",
+   kicker:"Demo en vivo · brincolines y fiestas",
+   lead:"Toca las respuestas como si escribieras a una renta de brincolines en Miami. QuoteLoop contesta con precios en segundos, sigue la conversación hasta la reserva y le avisa al dueño.",
+   c_start:"Hola! Cuánto cuesta un brincolín para el sábado? 🎉",
+   b_menu1:function(w){return "¡Hola! 👋 Gracias por escribir a Fiesta Brinca. Sí tenemos disponible para "+w+". Precio por el día (hasta 8 horas), con entrega e instalación incluidas:";},
+   b_menu2:"¿Cuál te gusta? 😊",
+   b_extras:"¡Buena elección! ¿Quieres agregar algo?",
+   c_none:"Solo el brincolín",
+   b_zip:"Perfecto. ¿En qué código postal (ZIP) es la fiesta? Así te doy el total con la entrega.",
+   delivery:"Entrega e instalación", free:"Gratis",
+   b_quote2:function(){return "Para apartar la fecha se deja un depósito de $50 y el resto se paga el día de la fiesta. ¿Te lo reservo?";},
+   c_yes:"Sí, resérvalo",
+   b_name:"¡Genial! 🙌 ¿A nombre de quién lo pongo?",
+   b_done:function(n,w){return "Listo, "+n+" ✅ Te aparté todo para "+w+". Para confirmar, aquí está el link del depósito de $50:";},
+   paylink:"Pagar depósito de $50", paysub:"Link de ejemplo · no cobra",
+   b_done2:"El viernes te escribimos para confirmar la hora de entrega. ¡Gracias por elegirnos! 🎈",
+   b_think:"¡Claro, sin problema! Mañana te escribo por si tienes alguna pregunta. Los sábados se llenan rápido, así que avísame cuando decidas 😊",
+   b_follow:function(w){return "¡Hola! 👋 Te escribo de Fiesta Brinca. ¿Pudiste revisar la cotización para "+w+"? Todavía está disponible. ¿Te lo aparto?";},
+   b_bye:"¡Entendido! Gracias por considerarnos. Si más adelante tienes otra fiesta, aquí estamos 🎈",
+   l_newS:"Cliente: +1 (305) •••-••12",
+   l_quoteS:"Incluye entrega por ZIP e impuesto",
+   l_book:"Reserva pedida → aviso al dueño", l_bookS:"Depósito: link enviado al cliente",
+   n_title:"🎈 Nueva reserva",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.say+" ("+o.opt+") · Total $"+o.total+"\nDepósito de $50 pendiente";}
+  },
+  en:{
+   tab:"🎈 Parties", tname:"Bounce houses & parties",
+   kicker:"Live demo · bounce houses & parties",
+   lead:"Tap the replies as if you were texting a bounce house rental in Miami. QuoteLoop answers with prices in seconds, follows up until the booking and alerts the owner.",
+   c_start:"Hi! How much is a bounce house for Saturday? 🎉",
+   b_menu1:function(w){return "Hi! 👋 Thanks for texting Fiesta Brinca. Yes, we're available "+w+". Price for the day (up to 8 hours), delivery and setup included:";},
+   b_menu2:"Which one do you like? 😊",
+   b_extras:"Great pick! Want to add anything?",
+   c_none:"Just the bounce house",
+   b_zip:"Perfect. What ZIP code is the party in? That way I can give you the total with delivery.",
+   delivery:"Delivery & setup", free:"Free",
+   b_quote2:function(){return "To hold the date we take a $50 deposit and the rest is paid on party day. Should I book it for you?";},
+   c_yes:"Yes, book it",
+   b_name:"Awesome! 🙌 What name should I put it under?",
+   b_done:function(n,w){return "Done, "+n+" ✅ Everything is held for "+w+". To confirm, here's the link for the $50 deposit:";},
+   paylink:"Pay $50 deposit", paysub:"Sample link · no charge",
+   b_done2:"We'll text you Friday to confirm the delivery time. Thanks for choosing us! 🎈",
+   b_think:"Of course, no problem! I'll check in tomorrow in case you have questions. Saturdays fill up fast, so just let me know 😊",
+   b_follow:function(w){return "Hi! 👋 It's Fiesta Brinca. Did you get a chance to look at the quote for "+w+"? It's still available. Want me to hold it?";},
+   b_bye:"Got it! Thanks for considering us. If you have another party later on, we're here 🎈",
+   l_newS:"Customer: +1 (305) •••-••12",
+   l_quoteS:"Includes delivery by ZIP and sales tax",
+   l_book:"Booking requested → owner alerted", l_bookS:"Deposit link sent to the customer",
+   n_title:"🎈 New booking",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.say+" ("+o.opt+") · Total $"+o.total+"\n$50 deposit pending";}
+  }
+ },
 
-/* ---------- Textos ---------- */
+ auto:{
+  name:"Sol Auto Sales", av:"SA", tax:0.07, deposit:500, optRow:false, whenOpt:true,
+  fee:{price:399, es:"Documentación (dealer fee)", en:"Documentation (dealer fee)"},
+  items:{
+   camry:{price:14900, es:"Toyota Camry 2018 · 78,000 mi", en:"2018 Toyota Camry · 78,000 mi"},
+   civic:{price:16500, es:"Honda Civic 2019 · 52,000 mi", en:"2019 Honda Civic · 52,000 mi"},
+   rogue:{price:17900, es:"Nissan Rogue 2020 · 61,000 mi", en:"2020 Nissan Rogue · 61,000 mi"}
+  },
+  extras:{
+   warranty:{price:990, es:"Garantía de 12 meses", en:"12-month warranty"},
+   tint:{price:250, es:"Polarizado (tint)", en:"Window tint"}
+  },
+  opts:{
+   today:{fee:0, es:"hoy a las 5:00 p.m.", en:"today at 5:00 PM"},
+   tomorrow:{fee:0, es:"mañana a las 11:00 a.m.", en:"tomorrow at 11:00 AM"},
+   sat:{fee:0, es:function(){return satLabel()+" a las 10:00 a.m.";}, en:function(){return satLabel()+" at 10:00 AM";}}
+  },
+  when:function(){ return ""; },
+  es:{
+   tab:"🚗 Dealer de autos", tname:"Dealer de autos",
+   kicker:"Demo en vivo · dealer de autos usados",
+   lead:"Toca las respuestas como si escribieras a un dealer de autos usados en Miami. QuoteLoop contesta con el inventario y los precios en segundos, agenda la prueba de manejo, da seguimiento y le avisa al dueño.",
+   c_start:"Hola! Vi un carro en Marketplace. Todavía lo tienen? Cuánto es? 🚗",
+   b_menu1:function(){return "¡Hola! 👋 Gracias por escribir a Sol Auto Sales. Estos son los que tenemos disponibles ahora, todos con Carfax limpio:";},
+   b_menu2:"¿Cuál te interesa? 😊",
+   b_extras:"¡Buen carro! ¿Quieres agregar algo?",
+   c_none:"Solo el carro",
+   b_zip:"Perfecto. ¿Cuándo puedes venir a verlo y hacer la prueba de manejo?",
+   b_quote2:function(){return "Para apartarlo se deja un depósito de $500, que se descuenta del precio. ¿Te lo aparto?";},
+   c_yes:"Sí, apártalo",
+   b_name:"¡Genial! 🙌 ¿A nombre de quién lo aparto?",
+   b_done:function(n,w){return "Listo, "+n+" ✅ El carro queda apartado y tu cita es "+w+". Para confirmar, aquí está el link del depósito de $500:";},
+   paylink:"Pagar depósito de $500", paysub:"Link de ejemplo · no cobra",
+   b_done2:"Trae tu licencia y tu seguro para la prueba de manejo. ¡Te esperamos! 🚗",
+   b_think:"¡Claro! Mañana te escribo por si tienes preguntas. Estos carros se venden rápido, así que avísame cuando decidas 😊",
+   b_follow:function(){return "¡Hola! 👋 Te escribo de Sol Auto Sales. ¿Pudiste pensarlo? El carro todavía está disponible. ¿Te lo aparto y te agendo la prueba de manejo?";},
+   b_bye:"¡Entendido! Gracias por escribirnos. Si buscas otro carro más adelante, aquí estamos 🚗",
+   l_newS:"Cliente: +1 (786) •••-••47 · vino de Marketplace",
+   l_replyS:"Usando el inventario y los precios del dealer",
+   l_quoteS:"Incluye dealer fee e impuesto",
+   l_book:"Carro apartado y cita → aviso al dueño", l_bookS:"Depósito: link enviado al cliente",
+   n_title:"🚗 Cita y carro apartado",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nTotal $"+o.total+"\nDepósito de $500 pendiente";}
+  },
+  en:{
+   tab:"🚗 Car dealer", tname:"Car dealer",
+   kicker:"Live demo · used car dealer",
+   lead:"Tap the replies as if you were texting a used car dealer in Miami. QuoteLoop answers with inventory and prices in seconds, books the test drive, follows up and alerts the owner.",
+   c_start:"Hi! I saw a car on Marketplace. Is it still available? How much? 🚗",
+   b_menu1:function(){return "Hi! 👋 Thanks for texting Sol Auto Sales. Here's what we have available right now, all with a clean Carfax:";},
+   b_menu2:"Which one are you interested in? 😊",
+   b_extras:"Great car! Want to add anything?",
+   c_none:"Just the car",
+   b_zip:"Perfect. When can you come see it and take a test drive?",
+   b_quote2:function(){return "To hold it we take a $500 deposit, which comes off the price. Should I hold it for you?";},
+   c_yes:"Yes, hold it",
+   b_name:"Awesome! 🙌 What name should I hold it under?",
+   b_done:function(n,w){return "Done, "+n+" ✅ The car is on hold and your appointment is "+w+". To confirm, here's the link for the $500 deposit:";},
+   paylink:"Pay $500 deposit", paysub:"Sample link · no charge",
+   b_done2:"Bring your license and insurance for the test drive. See you then! 🚗",
+   b_think:"Of course! I'll check in tomorrow in case you have questions. These cars sell fast, so just let me know 😊",
+   b_follow:function(){return "Hi! 👋 It's Sol Auto Sales. Did you get a chance to think it over? The car is still available. Want me to hold it and book your test drive?";},
+   b_bye:"Got it! Thanks for reaching out. If you're looking for another car later on, we're here 🚗",
+   l_newS:"Customer: +1 (786) •••-••47 · came from Marketplace",
+   l_replyS:"Using the dealer's own inventory and prices",
+   l_quoteS:"Includes dealer fee and sales tax",
+   l_book:"Car on hold + appointment → owner alerted", l_bookS:"Deposit link sent to the customer",
+   n_title:"🚗 Appointment + car on hold",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nTotal $"+o.total+"\n$500 deposit pending";}
+  }
+ },
+
+ ac:{
+  name:"Frío Total AC", av:"FT", tax:0, deposit:0, optRow:true, fee:null, whenOpt:false,
+  items:{
+   diag:{price:89, es:"Diagnóstico y reparación (desde)", en:"Diagnosis & repair (from)"},
+   tune:{price:129, es:"Mantenimiento completo", en:"Full tune-up"},
+   ms12:{price:1850, es:"Mini split 12,000 BTU instalado", en:"12,000 BTU mini split, installed"},
+   ms18:{price:2350, es:"Mini split 18,000 BTU instalado", en:"18,000 BTU mini split, installed"}
+  },
+  extras:{
+   ducts:{price:299, es:"Limpieza de ductos", en:"Duct cleaning"},
+   plan:{price:199, es:"Plan anual (2 mantenimientos)", en:"Yearly plan (2 tune-ups)"}
+  },
+  opts:{
+   "33012": {fee:0,  say:"33012", es:"Hialeah", en:"Hialeah"},
+   "33157": {fee:35, say:"33157", es:"Palmetto Bay", en:"Palmetto Bay"},
+   "33139": {fee:49, say:"33139", es:"Miami Beach", en:"Miami Beach"}
+  },
+  when:function(){ return lang === "es" ? "mañana entre 8 y 12" : "tomorrow between 8 and 12"; },
+  es:{
+   tab:"❄️ Contratista AC", tname:"Contratista de aire acondicionado",
+   kicker:"Demo en vivo · contratista de aire acondicionado",
+   lead:"Toca las respuestas como si escribieras a un técnico de aire acondicionado en Miami. QuoteLoop contesta con precios en segundos, agenda la visita, da seguimiento y le avisa al dueño.",
+   c_start:"Hola! Mi aire no está enfriando 🥵 Cuánto cobran?",
+   b_menu1:function(w){return "¡Hola! 👋 Gracias por escribir a Frío Total AC. Tenemos técnico disponible "+w+". Estos son nuestros precios:";},
+   b_menu2:"¿Qué necesitas? 😊",
+   b_extras:"Perfecto. ¿Quieres agregar algo?",
+   c_none:"Solo eso",
+   b_zip:"¿En qué código postal (ZIP) es la casa? Así te doy el total con la visita.",
+   delivery:"Visita técnica", free:"Sin cargo",
+   b_quote2:function(w){return "Pagas cuando el técnico termine. ¿Te agendo la visita para "+w+"?";},
+   c_yes:"Sí, agéndala",
+   b_name:"¡Perfecto! 🙌 ¿A nombre de quién la agendo?",
+   b_done:function(n,w){return "Listo, "+n+" ✅ Tu visita quedó para "+w+". Te avisamos cuando el técnico vaya en camino:";},
+   paylink:"Agregar al calendario", paysub:"Link de ejemplo",
+   b_done2:"Si el problema cambia, escríbenos aquí mismo. ¡Gracias! ❄️",
+   b_think:"¡Claro! Mañana te escribo por si tienes preguntas. Con este calor la agenda se llena rápido 😊",
+   b_follow:function(w){return "¡Hola! 👋 Te escribo de Frío Total AC. ¿Todavía necesitas ayuda con el aire? Tenemos espacio "+w+". ¿Te agendo?";},
+   b_bye:"¡Entendido! Gracias por escribirnos. Si el aire vuelve a fallar, aquí estamos ❄️",
+   l_newS:"Cliente: +1 (305) •••-••83",
+   l_quoteS:"Incluye la visita según el ZIP",
+   l_book:"Visita agendada → aviso al dueño", l_bookS:"Recordatorio programado para el cliente",
+   n_title:"❄️ Nueva visita",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.say+" ("+o.opt+") · Total $"+o.total+"\nPago al terminar";}
+  },
+  en:{
+   tab:"❄️ AC contractor", tname:"AC contractor",
+   kicker:"Live demo · air conditioning contractor",
+   lead:"Tap the replies as if you were texting an AC technician in Miami. QuoteLoop answers with prices in seconds, books the visit, follows up and alerts the owner.",
+   c_start:"Hi! My AC isn't cooling 🥵 How much do you charge?",
+   b_menu1:function(w){return "Hi! 👋 Thanks for texting Frío Total AC. We have a technician available "+w+". Here are our prices:";},
+   b_menu2:"What do you need? 😊",
+   b_extras:"Perfect. Want to add anything?",
+   c_none:"Just that",
+   b_zip:"What ZIP code is the house in? That way I can give you the total with the visit.",
+   delivery:"Service call", free:"No charge",
+   b_quote2:function(w){return "You pay when the technician is done. Should I book the visit for "+w+"?";},
+   c_yes:"Yes, book it",
+   b_name:"Perfect! 🙌 What name should I book it under?",
+   b_done:function(n,w){return "Done, "+n+" ✅ Your visit is set for "+w+". We'll text you when the technician is on the way:";},
+   paylink:"Add to calendar", paysub:"Sample link",
+   b_done2:"If anything changes, just text us here. Thanks! ❄️",
+   b_think:"Of course! I'll check in tomorrow in case you have questions. With this heat the schedule fills up fast 😊",
+   b_follow:function(w){return "Hi! 👋 It's Frío Total AC. Do you still need help with your AC? We have an opening "+w+". Should I book it?";},
+   b_bye:"Got it! Thanks for reaching out. If your AC acts up again, we're here ❄️",
+   l_newS:"Customer: +1 (305) •••-••83",
+   l_quoteS:"Includes the service call by ZIP",
+   l_book:"Visit booked → owner alerted", l_bookS:"Reminder scheduled for the customer",
+   n_title:"❄️ New visit",
+   n_body:function(o){return o.name+" · "+o.when+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.say+" ("+o.opt+") · Total $"+o.total+"\nPayment when done";}
+  }
+ }
+};
+var IND_ORDER = ["party", "auto", "ac"];
+
+/* ---------- Textos comunes ---------- */
 var T = {
  es:{
-  kicker:"Demo en vivo · brincolines y fiestas",
   h1:"Tú eres el cliente. Pide un precio.",
-  lead:"Toca las respuestas como si escribieras a una renta de brincolines en Miami. QuoteLoop contesta con precios en segundos, sigue la conversación hasta la reserva y le avisa al dueño.",
+  pick:"Elige el negocio:",
   online:"en línea", typing:"escribiendo…", fictional:"Demo",
   composer:"Toca una respuesta arriba",
   behind:"Lo que pasa detrás", behindSub:"Esto no lo ve el cliente. Es lo que QuoteLoop hace por el dueño.",
   logEmpty:"Toca el primer mensaje para empezar.",
   notifyApp:"QuoteLoop · ahora",
-  ctaH:"¿Quieres esto con tus precios?",
-  ctaP:"Lo instalamos con tu lista de precios, tus zonas y tu forma de hablar. Mes a mes, con garantía de 30 días.",
+  ctaH:"¿Quieres esto en tu negocio?",
+  ctaP:"Lo instalamos con tus precios, tus servicios y tu forma de hablar. Cada lead queda guardado y organizado.",
   ctaBtn:"Quiero mi demo", restart:"Reiniciar demo",
-  fine:"Negocio y precios ficticios. Los tiempos de respuesta son los reales de WhatsApp + Make (5 a 9 s). En la demo no se envía ni se cobra nada.",
+  fine:"Negocios y precios ficticios. Los tiempos de respuesta son los reales de WhatsApp + Make (5 a 9 s). En la demo no se envía ni se cobra nada.",
   today:"HOY", hint:"👇 Toca el mensaje de abajo para enviarlo", nextDay:"MAÑANA · 10:00 A.M.",
   fast:function(s){return "Respondido en "+s+" s";},
   saturday:function(d){return "el sábado "+d;},
-  c_start:"Hola! Cuánto cuesta un brincolín para el sábado? 🎉",
-  b_menu1:function(sat){return "¡Hola! 👋 Gracias por escribir a Fiesta Brinca. Sí tenemos disponible para "+sat+". Precio por el día (hasta 8 horas), con entrega e instalación incluidas:";},
-  b_menu2:"¿Cuál te gusta? 😊",
-  b_extras:"¡Buena elección! ¿Quieres agregar algo?",
-  c_none:"Solo el brincolín",
-  b_zip:"Perfecto. ¿En qué código postal (ZIP) es la fiesta? Así te doy el total con la entrega.",
   b_quote:"Aquí está tu cotización 👇",
-  delivery:"Entrega e instalación", free:"Gratis", tax:"Impuesto (7%)", total:"Total",
-  b_quote2:function(){return "Para apartar la fecha se deja un depósito de $"+DEPOSIT+" y el resto se paga el día de la fiesta. ¿Te lo reservo?";},
-  c_yes:"Sí, resérvalo", c_think:"Déjame pensarlo",
-  b_name:"¡Genial! 🙌 ¿A nombre de quién lo pongo?",
-  c_name:"María López",
-  b_done:function(n,sat){return "Listo, "+n+" ✅ Te aparté todo para "+sat+". Para confirmar, aquí está el link del depósito de $"+DEPOSIT+":";},
-  paylink:"Pagar depósito de $"+DEPOSIT, paysub:"Link de ejemplo · no cobra",
-  b_done2:"El viernes te escribimos para confirmar la hora de entrega. ¡Gracias por elegirnos! 🎈",
-  b_think:"¡Claro, sin problema! Mañana te escribo por si tienes alguna pregunta. Los sábados se llenan rápido, así que avísame cuando decidas 😊",
-  b_follow:function(sat){return "¡Hola! 👋 Te escribo de Fiesta Brinca. ¿Pudiste revisar la cotización para "+sat+"? Todavía está disponible. ¿Te lo aparto?";},
-  c_no:"No, gracias",
-  b_bye:"¡Entendido! Gracias por considerarnos. Si más adelante tienes otra fiesta, aquí estamos 🎈",
-  l_new:"Mensaje nuevo por WhatsApp", l_newS:"Cliente: +1 (305) •••-••12",
+  tax:"Impuesto (7%)", total:"Total",
+  c_think:"Déjame pensarlo", c_no:"No, gracias", c_name:"María López",
+  l_new:"Mensaje nuevo por WhatsApp",
   l_reply:function(s){return "Respuesta con precios enviada en "+s+" s";}, l_replyS:"Usando la lista de precios del negocio",
-  l_item:function(n){return "Interés: "+n;}, l_itemS:"Etiqueta: lead caliente 🔥",
-  l_quote:function(t){return "Cotización enviada: $"+t;}, l_quoteS:"Incluye entrega por ZIP e impuesto",
+  l_item:function(n){return "Interés: "+n;}, l_itemS:"Guardado en la hoja de leads · lead caliente 🔥",
+  l_quote:function(t){return "Cotización enviada: $"+t;},
   l_follow:"Seguimiento programado", l_followS:"Mañana a las 10:00 a.m. si no contesta",
   l_followSent:"Seguimiento enviado solo", l_followSentS:"El dueño no tuvo que acordarse",
-  l_book:"Reserva pedida → aviso al dueño", l_bookS:"Depósito: link enviado al cliente",
   l_lost:"Lead cerrado como perdido", l_lostS:"Ya no se le escribe más (sin molestar)",
-  n_title:"🎈 Nueva reserva",
-  n_body:function(o){return o.name+" · "+o.sat+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.zip+" ("+o.area+") · Total $"+o.total+"\nDepósito de $"+DEPOSIT+" pendiente";},
   n_lostT:"Lead perdido",
-  n_lostB:"El cliente dijo que no después del seguimiento. Quedó guardado para promociones futuras."
+  n_lostB:"El cliente dijo que no después del seguimiento. Quedó guardado en la hoja de leads para promociones futuras."
  },
  en:{
-  kicker:"Live demo · bounce houses & parties",
   h1:"You're the customer. Ask for a price.",
-  lead:"Tap the replies as if you were texting a bounce house rental in Miami. QuoteLoop answers with prices in seconds, follows up until the booking and alerts the owner.",
+  pick:"Pick a business:",
   online:"online", typing:"typing…", fictional:"Demo",
   composer:"Tap a reply above",
   behind:"What happens behind the scenes", behindSub:"The customer never sees this. It's what QuoteLoop does for the owner.",
   logEmpty:"Tap the first message to start.",
   notifyApp:"QuoteLoop · now",
-  ctaH:"Want this with your prices?",
-  ctaP:"We set it up with your price list, your delivery zones and your tone. Month to month, with a 30-day guarantee.",
+  ctaH:"Want this for your business?",
+  ctaP:"We set it up with your prices, your services and your tone. Every lead is saved and organized.",
   ctaBtn:"Get my demo", restart:"Restart demo",
-  fine:"Fictional business and sample prices. Reply times match real WhatsApp + Make (5 to 9 s). Nothing is sent or charged in this demo.",
+  fine:"Fictional businesses and sample prices. Reply times match real WhatsApp + Make (5 to 9 s). Nothing is sent or charged in this demo.",
   today:"TODAY", hint:"👇 Tap the message below to send it", nextDay:"TOMORROW · 10:00 AM",
   fast:function(s){return "Answered in "+s+" s";},
   saturday:function(d){return "Saturday "+d;},
-  c_start:"Hi! How much is a bounce house for Saturday? 🎉",
-  b_menu1:function(sat){return "Hi! 👋 Thanks for texting Fiesta Brinca. Yes, we're available "+sat+". Price for the day (up to 8 hours), delivery and setup included:";},
-  b_menu2:"Which one do you like? 😊",
-  b_extras:"Great pick! Want to add anything?",
-  c_none:"Just the bounce house",
-  b_zip:"Perfect. What ZIP code is the party in? That way I can give you the total with delivery.",
   b_quote:"Here's your quote 👇",
-  delivery:"Delivery & setup", free:"Free", tax:"Sales tax (7%)", total:"Total",
-  b_quote2:function(){return "To hold the date we take a $"+DEPOSIT+" deposit and the rest is paid on party day. Should I book it for you?";},
-  c_yes:"Yes, book it", c_think:"Let me think about it",
-  b_name:"Awesome! 🙌 What name should I put it under?",
-  c_name:"Maria Lopez",
-  b_done:function(n,sat){return "Done, "+n+" ✅ Everything is held for "+sat+". To confirm, here's the link for the $"+DEPOSIT+" deposit:";},
-  paylink:"Pay $"+DEPOSIT+" deposit", paysub:"Sample link · no charge",
-  b_done2:"We'll text you Friday to confirm the delivery time. Thanks for choosing us! 🎈",
-  b_think:"Of course, no problem! I'll check in tomorrow in case you have questions. Saturdays fill up fast, so just let me know 😊",
-  b_follow:function(sat){return "Hi! 👋 It's Fiesta Brinca. Did you get a chance to look at the quote for "+sat+"? It's still available. Want me to hold it?";},
-  c_no:"No, thanks",
-  b_bye:"Got it! Thanks for considering us. If you have another party later on, we're here 🎈",
-  l_new:"New WhatsApp message", l_newS:"Customer: +1 (305) •••-••12",
+  tax:"Sales tax (7%)", total:"Total",
+  c_think:"Let me think about it", c_no:"No, thanks", c_name:"Maria Lopez",
+  l_new:"New WhatsApp message",
   l_reply:function(s){return "Reply with prices sent in "+s+" s";}, l_replyS:"Using the business's own price list",
-  l_item:function(n){return "Interested in: "+n;}, l_itemS:"Tag: hot lead 🔥",
-  l_quote:function(t){return "Quote sent: $"+t;}, l_quoteS:"Includes delivery by ZIP and sales tax",
+  l_item:function(n){return "Interested in: "+n;}, l_itemS:"Saved to the lead sheet · hot lead 🔥",
+  l_quote:function(t){return "Quote sent: $"+t;},
   l_follow:"Follow-up scheduled", l_followS:"Tomorrow 10:00 AM if no reply",
   l_followSent:"Follow-up sent automatically", l_followSentS:"The owner didn't have to remember",
-  l_book:"Booking requested → owner alerted", l_bookS:"Deposit link sent to the customer",
   l_lost:"Lead closed as lost", l_lostS:"No more messages (no pestering)",
-  n_title:"🎈 New booking",
-  n_body:function(o){return o.name+" · "+o.sat+"\n"+o.item+(o.extra?" + "+o.extra:"")+"\nZIP "+o.zip+" ("+o.area+") · Total $"+o.total+"\n$"+DEPOSIT+" deposit pending";},
   n_lostT:"Lead lost",
-  n_lostB:"The customer said no after the follow-up. Saved for future promotions."
+  n_lostB:"The customer said no after the follow-up. Saved to the lead sheet for future promotions."
  }
 };
 
 /* ---------- Estado ---------- */
-var lang = "es", st, timers = [], run = 0;
+var lang = "es", ind = "party", st, timers = [], run = 0;
 var $ = function(id){return document.getElementById(id);};
 var msgs = $("msgs"), replies = $("replies"), log = $("log");
 var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function t(k){ return T[lang][k]; }
-function money(n){ return "$" + (Math.round(n*100)/100).toFixed(2).replace(/\.00$/,""); }
+function I(){ return IND[ind]; }
+function t(k){ var v = I()[lang][k]; return v !== undefined ? v : T[lang][k]; }
+function val(x){ return typeof x === "function" ? x() : x; }
+function money(n){ return "$" + (Math.round(n*100)/100).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}).replace(/\.00$/,""); }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
 function nextSaturday(){
@@ -357,7 +529,7 @@ function nextSaturday(){
 function satLabel(){
   var d = nextSaturday();
   var s = d.toLocaleDateString(lang === "es" ? "es-US" : "en-US", lang === "es" ? {day:"numeric", month:"long"} : {month:"long", day:"numeric"});
-  return t("saturday")(s);
+  return T[lang].saturday(s);
 }
 function clockStr(d){
   return d.toLocaleTimeString(lang === "es" ? "es-US" : "en-US", {hour:"numeric", minute:"2-digit"});
@@ -426,7 +598,7 @@ function botTurn(parts, done, opts){
 /* ---------- Flujo ---------- */
 function start(){
   run++; timers.forEach(clearTimeout); timers = [];
-  st = {base:new Date(), offset:0, item:null, extra:null, zip:null, total:0, name:null};
+  st = {base:new Date(), offset:0, item:null, extra:null, opt:null, when:val(I().when), total:0, name:null};
   msgs.innerHTML = ""; log.innerHTML = '<li class="emptyrow"><span class="empty">' + esc(t("logEmpty")) + "</span></li>";
   $("notify").classList.remove("on"); $("cta").classList.remove("on");
   $("presence").textContent = t("online");
@@ -436,25 +608,27 @@ function start(){
 }
 
 function step1(){
+  var items = I().items;
   say(t("c_start"));
   addLog("chat", t("l_new"), t("l_newS"));
-  var menu = '<div class="menu">' + Object.keys(ITEMS).map(function(k){
-    return "<div><span>" + esc(ITEMS[k][lang]) + "</span><b>" + money(ITEMS[k].price) + "</b></div>";
+  var menu = '<div class="menu">' + Object.keys(items).map(function(k){
+    return "<div><span>" + esc(items[k][lang]) + "</span><b>" + money(items[k].price) + "</b></div>";
   }).join("") + "</div>";
-  botTurn([esc(t("b_menu1")(satLabel())) + menu, esc(t("b_menu2"))], function(secs){
+  botTurn([esc(t("b_menu1")(st.when)) + menu, esc(t("b_menu2"))], function(secs){
     addLog("bolt", t("l_reply")(secs), t("l_replyS"));
-    setReplies(Object.keys(ITEMS).map(function(k){
-      return {label:ITEMS[k][lang] + " · " + money(ITEMS[k].price), go:function(){ pickItem(k); }};
+    setReplies(Object.keys(items).map(function(k){
+      return {label:items[k][lang] + " · " + money(items[k].price), go:function(){ pickItem(k); }};
     }));
   }, {fast:true});
 }
 
 function pickItem(k){
-  st.item = k; say(ITEMS[k][lang]);
-  addLog("tag", t("l_item")(ITEMS[k][lang]), t("l_itemS"));
+  var it = I().items[k], extras = I().extras;
+  st.item = k; say(it[lang]);
+  addLog("tag", t("l_item")(it[lang]), t("l_itemS"));
   botTurn([esc(t("b_extras"))], function(){
-    var opts = Object.keys(EXTRAS).map(function(x){
-      return {label:"+ " + EXTRAS[x][lang] + " · " + money(EXTRAS[x].price), go:function(){ pickExtra(x); }};
+    var opts = Object.keys(extras).map(function(x){
+      return {label:"+ " + extras[x][lang] + " · " + money(extras[x].price), go:function(){ pickExtra(x); }};
     });
     opts.push({label:t("c_none"), go:function(){ pickExtra(null); }});
     setReplies(opts);
@@ -462,26 +636,31 @@ function pickItem(k){
 }
 
 function pickExtra(x){
-  st.extra = x; say(x ? "+ " + EXTRAS[x][lang] : t("c_none"));
+  var opts = I().opts;
+  st.extra = x; say(x ? "+ " + I().extras[x][lang] : t("c_none"));
   botTurn([esc(t("b_zip"))], function(){
-    setReplies(Object.keys(ZIPS).map(function(z){
-      return {label:z + " (" + ZIPS[z][lang] + ")", go:function(){ pickZip(z); }};
+    setReplies(Object.keys(opts).map(function(z){
+      var o = opts[z], name = val(o[lang]);
+      return {label:o.say ? o.say + " (" + name + ")" : name, go:function(){ pickOpt(z); }};
     }));
   });
 }
 
-function pickZip(z){
-  st.zip = z; say(z);
-  var it = ITEMS[st.item], ex = st.extra ? EXTRAS[st.extra] : null, zp = ZIPS[z];
-  var rent = it.price + (ex ? ex.price : 0);
-  var tax = Math.round(rent * TAX * 100) / 100;
-  st.total = Math.round((rent + tax + zp.fee) * 100) / 100;
+function pickOpt(z){
+  var ind0 = I(), o = ind0.opts[z], name = val(o[lang]);
+  st.opt = z; say(o.say || name);
+  if (ind0.whenOpt) st.when = name;
+  var it = ind0.items[st.item], ex = st.extra ? ind0.extras[st.extra] : null, fee = ind0.fee;
+  var base = it.price + (ex ? ex.price : 0);
+  var tax = Math.round(base * ind0.tax * 100) / 100;
+  st.total = Math.round((base + tax + o.fee + (fee ? fee.price : 0)) * 100) / 100;
   var rows = '<table class="q"><tr><td>' + esc(it[lang]) + "</td><td>" + money(it.price) + "</td></tr>" +
     (ex ? "<tr><td>" + esc(ex[lang]) + "</td><td>" + money(ex.price) + "</td></tr>" : "") +
-    "<tr><td>" + esc(t("delivery")) + " · " + esc(zp[lang]) + "</td><td>" + (zp.fee ? money(zp.fee) : esc(t("free"))) + "</td></tr>" +
-    '<tr class="sub"><td>' + esc(t("tax")) + "</td><td>" + money(tax) + "</td></tr>" +
+    (fee ? "<tr><td>" + esc(fee[lang]) + "</td><td>" + money(fee.price) + "</td></tr>" : "") +
+    (ind0.optRow ? "<tr><td>" + esc(t("delivery")) + " · " + esc(name) + "</td><td>" + (o.fee ? money(o.fee) : esc(t("free"))) + "</td></tr>" : "") +
+    (ind0.tax ? '<tr class="sub"><td>' + esc(t("tax")) + "</td><td>" + money(tax) + "</td></tr>" : "") +
     '<tr class="total"><td>' + esc(t("total")) + "</td><td>" + money(st.total) + "</td></tr></table>";
-  botTurn([esc(t("b_quote")) + rows, esc(t("b_quote2")())], function(){
+  botTurn([esc(t("b_quote")) + rows, esc(t("b_quote2")(st.when))], function(){
     addLog("bolt", t("l_quote")(money(st.total).slice(1)), t("l_quoteS"));
     setReplies([{label:t("c_yes"), go:book}, {label:t("c_think"), go:think}]);
   });
@@ -491,13 +670,14 @@ function book(){
   say(t("c_yes"));
   botTurn([esc(t("b_name"))], function(){
     setReplies([{label:t("c_name"), go:function(){
+      var ind0 = I(), o = ind0.opts[st.opt];
       st.name = t("c_name"); say(st.name);
       var pay = '<a class="paylink" href="#" onclick="return false"><svg width="22" height="22" aria-hidden="true"><use href="#i-cal"/></svg><span><b>' + esc(t("paylink")) + "</b>" + esc(t("paysub")) + "</span></a>";
-      botTurn([esc(t("b_done")(st.name, satLabel())) + pay, esc(t("b_done2"))], function(){
+      botTurn([esc(t("b_done")(st.name, st.when)) + pay, esc(t("b_done2"))], function(){
         addLog("bell", t("l_book"), t("l_bookS"));
         notify(t("n_title"), t("n_body")({
-          name:st.name, sat:satLabel(), item:ITEMS[st.item][lang], extra:st.extra ? EXTRAS[st.extra][lang] : "",
-          zip:st.zip, area:ZIPS[st.zip][lang], total:money(st.total).slice(1)
+          name:st.name, when:st.when, item:ind0.items[st.item][lang], extra:st.extra ? ind0.extras[st.extra][lang] : "",
+          say:o.say || "", opt:val(o[lang]), total:money(st.total).slice(1)
         }));
         finish();
       });
@@ -513,7 +693,7 @@ function think(){
       sys(t("nextDay"));
       st.offset += 15 * 3600 * 1000;
       var d = now(); d.setHours(10, 0, 0, 0); st.offset = d.getTime() - st.base.getTime();
-      bubble("in", esc(t("b_follow")(satLabel())));
+      bubble("in", esc(t("b_follow")(st.when)));
       addLog("clock", t("l_followSent"), t("l_followSentS"));
       setReplies([{label:t("c_yes"), go:book}, {label:t("c_no"), go:decline}]);
     }, 1400);
@@ -538,28 +718,46 @@ function finish(){
   later(function(){ $("cta").classList.add("on"); }, 700);
 }
 
-/* ---------- Idioma ---------- */
-function applyLang(l){
-  lang = l; document.documentElement.lang = l;
-  document.querySelectorAll("[data-t]").forEach(function(el){ var v = T[l][el.getAttribute("data-t")]; if (typeof v === "string") el.textContent = v; });
-  document.querySelectorAll(".toggle button").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.lang === l ? "true" : "false"); });
-  document.title = l === "es" ? "Demo QuoteLoop | Brincolines y fiestas" : "QuoteLoop Demo | Bounce houses & parties";
-  try { localStorage.setItem("ql-lang", l); } catch (e) {}
+/* ---------- Idioma y negocio ---------- */
+function paint(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(function(el){ var v = t(el.getAttribute("data-t")); if (typeof v === "string") el.textContent = v; });
+  document.querySelectorAll(".toggle button").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.lang === lang ? "true" : "false"); });
+  document.querySelectorAll(".picker button").forEach(function(b){
+    b.textContent = IND[b.dataset.ind][lang].tab;
+    b.setAttribute("aria-pressed", b.dataset.ind === ind ? "true" : "false");
+  });
+  $("bizName").textContent = I().name;
+  $("bizAv").textContent = I().av;
+  document.title = (lang === "es" ? "Demo QuoteLoop | " : "QuoteLoop Demo | ") + t("tname");
   start();
 }
+function applyLang(l){
+  lang = l;
+  try { localStorage.setItem("ql-lang", l); } catch (e) {}
+  paint();
+}
+function applyInd(k){
+  if (!IND[k]) return;
+  ind = k;
+  try { var u = new URL(location.href); u.searchParams.set("n", k); history.replaceState(null, "", u); } catch (e) {}
+  paint();
+}
 document.querySelectorAll(".toggle button").forEach(function(b){ b.addEventListener("click", function(){ if (b.dataset.lang !== lang) applyLang(b.dataset.lang); }); });
+document.querySelectorAll(".picker button").forEach(function(b){ b.addEventListener("click", function(){ if (b.dataset.ind !== ind) applyInd(b.dataset.ind); }); });
 document.querySelectorAll("[data-restart]").forEach(function(b){ b.addEventListener("click", start); });
 
 function tick(){ $("clock").textContent = new Date().toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit"}).replace(/\s?[AP]M$/, ""); }
 tick(); setInterval(tick, 15000);
 
-var initial = "es";
-var q = new URLSearchParams(location.search).get("lang");
-if (q === "en" || q === "es") initial = q;
+var params = new URLSearchParams(location.search);
+var q = params.get("lang"), n = params.get("n");
+if (q === "en" || q === "es") lang = q;
 else {
-  try { if (localStorage.getItem("ql-lang") === "en") initial = "en"; } catch (e) {}
+  try { if (localStorage.getItem("ql-lang") === "en") lang = "en"; } catch (e) {}
 }
-applyLang(initial);
+if (n && IND[n]) ind = n;
+paint();
 })();
 </script>
 </body>
